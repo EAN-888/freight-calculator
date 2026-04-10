@@ -1,10 +1,24 @@
-// 木虾物流运费查询系统 - 更新版
+// 木虾物流运费查询系统 v4.0 - 完整数据版本
+// 数据来源：腾讯文档 https://docs.qq.com/sheet/DRm1UQWp2aXlVZW1s
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
     initCountrySelect();
     loadHistory();
+    updateDataInfo();
 });
+
+// 更新数据信息
+function updateDataInfo() {
+    const infoDiv = document.createElement('div');
+    infoDiv.className = 'info-banner';
+    infoDiv.innerHTML = `
+        💡 数据版本：v4.0 | 最后更新：2026-04-10 14:43<br>
+        📊 数据来源：腾讯文档 | 总计：5 个 Sheet, 100+ 个渠道
+    `;
+    const searchSection = document.querySelector('.search-section');
+    searchSection.insertBefore(infoDiv, document.querySelector('.form-group'));
+}
 
 // 初始化国家选择器
 function initCountrySelect() {
@@ -18,13 +32,12 @@ function initCountrySelect() {
 }
 
 // 搜索运费
-function searchFreight() {
+async function searchFreight() {
     const country = document.getElementById('country').value;
     const weight = parseFloat(document.getElementById('weight').value);
     const serviceType = document.getElementById('serviceType').value;
     const cargoType = document.getElementById('cargoType').value || '普货';
 
-    // 验证输入
     if (!country) {
         alert('请选择目的国');
         return;
@@ -34,12 +47,13 @@ function searchFreight() {
         return;
     }
 
-    // 显示加载状态
     document.getElementById('results').innerHTML = `
-        <div class="loading">正在计算运费</div>
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>正在计算运费...</p>
+        </div>
     `;
 
-    // 模拟延迟（实际使用可去掉）
     setTimeout(() => {
         const results = calculateFreight(country, weight, serviceType, cargoType);
         displayResults(results, weight);
@@ -47,122 +61,61 @@ function searchFreight() {
     }, 300);
 }
 
-// 计算运费
+// 计算运费 v4.0
 function calculateFreight(country, weight, serviceType, cargoType) {
     const results = [];
 
     freightRates.forEach(rate => {
-        // 检查国家匹配
-        if (!rate.countries.includes(country)) {
-            return;
-        }
+        if (!rate.countries.includes(country)) return;
+        if (serviceType && rate.providerType !== serviceType) return;
+        if (rate.status !== 'active') return;
 
-        // 检查服务商类型
-        if (serviceType && rate.providerType !== serviceType) {
-            return;
-        }
-
-        // 检查货物类型
-        if (cargoType !== '普货' && rate.cargoType !== cargoType) {
-            return;
-        }
-
-        // 检查最小重量
-        if (rate.minWeight && weight < rate.minWeight) {
-            return;
-        }
-
-        // 计算运费
         let basePrice = 0;
         let priceDetail = '';
 
         if (rate.weightRanges) {
-            // 重量区间计费
-            const range = rate.weightRanges.find(r => weight >= r.min && weight <= r.max);
-            if (range) {
-                basePrice = range.price;
-                priceDetail = `区间价 (${range.min}-${range.max}kg)`;
-            } else {
-                return; // 超出所有重量区间
+            for (const range of rate.weightRanges) {
+                if (weight >= range.min && (range.max === null || weight < range.max)) {
+                    if (Array.isArray(range.price)) {
+                        const regionIndex = getRegionIndex(country, weight);
+                        basePrice = weight * range.price[regionIndex];
+                        priceDetail = `${range.price[regionIndex]}元/KG × ${weight}kg`;
+                    } else {
+                        basePrice = weight * range.price;
+                        priceDetail = `${range.price}元/KG × ${weight}kg`;
+                    }
+                    break;
+                }
             }
-        } else if (rate.unitPrice) {
-            // 统一单价计费
-            basePrice = weight * rate.unitPrice;
-            priceDetail = `${rate.unitPrice}元/kg × ${weight}kg`;
-        } else {
-            // 需要特殊处理的渠道（如联邦、UPS等）
-            return;
         }
 
-        // 计算附加费
+        if (basePrice === 0) return;
+
         let additionalFees = [];
         let totalAdditional = 0;
 
-        // 木制品附加费
-        if (rate.additionalFee.wood && (cargoType === '带电' || cargoType === '敏感货' || 
-            (cargoType === '普货' && weight > 10))) { // 简化判断
-            const woodFee = rate.additionalFee.wood;
-            totalAdditional += woodFee * weight;
-            additionalFees.push(`木制品：${(woodFee * weight).toFixed(2)}元`);
-        }
+        if (rate.additionalFees) {
+            for (const [feeType, feeInfo] of Object.entries(rate.additionalFees)) {
+                let feeAmount = 0;
 
-        // 纺织品附加费
-        if (rate.additionalFee.textile) {
-            const textileFee = rate.additionalFee.textile;
-            totalAdditional += textileFee * weight;
-            additionalFees.push(`纺织品：${(textileFee * weight).toFixed(2)}元`);
-        }
+                if (feeInfo.type === 'per_kg') {
+                    feeAmount = feeInfo.amount * weight;
+                    additionalFees.push(`${getFeeName(feeType)}: ${feeAmount.toFixed(2)}元`);
+                } else if (feeInfo.type === 'per_ticket') {
+                    feeAmount = feeInfo.amount;
+                    additionalFees.push(`${getFeeName(feeType)}: ${feeInfo.amount}元`);
+                } else if (feeInfo.type === 'per_box') {
+                    feeAmount = feeInfo.amount;
+                    additionalFees.push(`${getFeeName(feeType)}: ${feeInfo.amount}元`);
+                } else if (feeInfo.type === 'per_item') {
+                    // 品名超额费暂不计算
+                } else if (feeInfo.type === 'percentage') {
+                    feeAmount = basePrice * feeInfo.rate;
+                    additionalFees.push(`${getFeeName(feeType)}: ${feeAmount.toFixed(2)}元`);
+                }
 
-        // 带电附加费
-        if (rate.additionalFee.battery && cargoType === '带电') {
-            const batteryFee = rate.additionalFee.battery;
-            totalAdditional += batteryFee * weight;
-            additionalFees.push(`带电：${(batteryFee * weight).toFixed(2)}元`);
-        }
-
-        // 带磁附加费
-        if (rate.additionalFee.magnet && cargoType === '带磁') {
-            const magnetFee = rate.additionalFee.magnet;
-            totalAdditional += magnetFee * weight;
-            additionalFees.push(`带磁：${(magnetFee * weight).toFixed(2)}元`);
-        }
-
-        // 笔类附加费
-        if (rate.additionalFee.pen) {
-            const penFee = rate.additionalFee.pen;
-            totalAdditional += penFee * weight;
-            additionalFees.push(`笔类：${(penFee * weight).toFixed(2)}元`);
-        }
-
-        // 偏远费
-        if (rate.additionalFee.remote) {
-            totalAdditional += rate.additionalFee.remote;
-            additionalFees.push(`偏远：${rate.additionalFee.remote}元`);
-        }
-
-        // 燃油附加费
-        if (rate.additionalFee.fuel) {
-            const fuelFee = basePrice * rate.additionalFee.fuel;
-            totalAdditional += fuelFee;
-            additionalFees.push(`燃油：${fuelFee.toFixed(2)}元`);
-        }
-
-        // 清关费/关税
-        if (rate.additionalFee.customs) {
-            totalAdditional += rate.additionalFee.customs;
-            additionalFees.push(`清关：${rate.additionalFee.customs}元`);
-        }
-
-        // 手续费
-        if (rate.additionalFee.handling) {
-            totalAdditional += rate.additionalFee.handling;
-            additionalFees.push(`手续费：${rate.additionalFee.handling}元`);
-        }
-
-        // 超重费
-        if (rate.additionalFee.heavy && weight > 32) {
-            totalAdditional += rate.additionalFee.heavy;
-            additionalFees.push(`超重：${rate.additionalFee.heavy}元`);
+                totalAdditional += feeAmount;
+            }
         }
 
         const totalPrice = basePrice + totalAdditional;
@@ -171,21 +124,43 @@ function calculateFreight(country, weight, serviceType, cargoType) {
             provider: rate.provider,
             providerType: rate.providerType,
             serviceType: rate.serviceType,
-            cargoType: rate.cargoType,
+            cargoType: rate.cargoType || '普货',
             basePrice: basePrice,
             additionalFees: additionalFees,
             totalAdditional: totalAdditional,
             totalPrice: totalPrice,
             deliveryTime: rate.deliveryTime,
             priceDetail: priceDetail,
-            currency: rate.currency
+            notes: rate.notes || ''
         });
     });
 
-    // 按总价排序
     results.sort((a, b) => a.totalPrice - b.totalPrice);
-
     return results;
+}
+
+// 获取附加费名称
+function getFeeName(type) {
+    const names = {
+        wood: '木制品',
+        textile: '纺织品',
+        battery: '带电',
+        magnet: '带磁',
+        pen: '笔类',
+        customs: '清关费',
+        handling: '手续费',
+        delivery: '派送费',
+        remote: '偏远费',
+        overWeight: '超重费',
+        overSize: '超长费',
+        fuel: '燃油费'
+    };
+    return names[type] || type;
+}
+
+// 获取区域索引
+function getRegionIndex(country, weight) {
+    return 0;
 }
 
 // 显示结果
@@ -197,7 +172,7 @@ function displayResults(results, weight) {
             <div class="empty-state">
                 <div class="icon">😕</div>
                 <p>暂无符合条件的报价</p>
-                <p style="margin-top: 10px; font-size: 0.9em;">请检查筛选条件或联系管理员维护报价</p>
+                <p style="margin-top: 10px; font-size: 0.9em;">请检查筛选条件</p>
             </div>
         `;
         return;
@@ -207,20 +182,19 @@ function displayResults(results, weight) {
         <table class="results-table">
             <thead>
                 <tr>
-                    <th onclick="sortTable('provider')">物流服务商 ↕</th>
-                    <th onclick="sortTable('providerType')">类型 ↕</th>
-                    <th onclick="sortTable('serviceType')">服务 ↕</th>
-                    <th>货物类型</th>
-                    <th onclick="sortTable('totalPrice')">运费 (¥) ↕</th>
-                    <th onclick="sortTable('deliveryTime')">时效 ↕</th>
-                    <th>附加费</th>
+                    <th>物流服务商</th>
+                    <th>类型</th>
+                    <th>服务</th>
+                    <th>运费 (¥)</th>
+                    <th>时效</th>
+                    <th>明细</th>
                     <th>操作</th>
                 </tr>
             </thead>
             <tbody>
     `;
 
-    results.forEach((result, index) => {
+    results.forEach(result => {
         const badgeClass = getBadgeClass(result.providerType);
         const additionalText = result.additionalFees.length > 0 
             ? `<span class="tooltip" data-tip="${result.additionalFees.join(' | ')}">+${result.totalAdditional.toFixed(2)}元</span>`
@@ -231,7 +205,6 @@ function displayResults(results, weight) {
                 <td><strong>${result.provider}</strong></td>
                 <td><span class="badge ${badgeClass}">${result.providerType}</span></td>
                 <td>${result.serviceType}</td>
-                <td>${result.cargoType}</td>
                 <td class="price">¥${result.totalPrice.toFixed(2)}</td>
                 <td>${result.deliveryTime}</td>
                 <td>${additionalText}</td>
@@ -249,26 +222,16 @@ function displayResults(results, weight) {
     container.innerHTML = html;
 }
 
-// 获取徽章样式
 function getBadgeClass(type) {
     const map = {
         '快递': 'badge-express',
         '空运': 'badge-air',
         '海运': 'badge-sea',
-        '专线': 'badge-line'
+        '铁路': 'badge-rail'
     };
     return map[type] || 'badge-line';
 }
 
-// 排序表格
-let sortDirection = 1;
-function sortTable(field) {
-    sortDirection *= -1;
-    // 实际应用中需要重新获取数据并排序
-    alert('排序功能开发中...');
-}
-
-// 复制价格
 function copyPrice(price) {
     navigator.clipboard.writeText(price).then(() => {
         alert('已复制：¥' + price);
@@ -277,7 +240,6 @@ function copyPrice(price) {
     });
 }
 
-// 重置表单
 function resetForm() {
     document.getElementById('country').value = '';
     document.getElementById('weight').value = '';
@@ -291,32 +253,14 @@ function resetForm() {
     `;
 }
 
-// 保存查询历史
 function saveHistory(country, weight, serviceType, cargoType) {
     let history = JSON.parse(localStorage.getItem('freightHistory') || '[]');
-    const record = {
-        country,
-        weight,
-        serviceType,
-        cargoType,
-        timestamp: Date.now()
-    };
-    
-    // 添加到开头
-    history.unshift(record);
-    
-    // 只保留最近 10 条
+    history.unshift({ country, weight, serviceType, cargoType, timestamp: Date.now() });
     history = history.slice(0, 10);
-    
     localStorage.setItem('freightHistory', JSON.stringify(history));
 }
 
-// 加载历史
-function loadHistory() {
-    // 后续可以添加历史记录展示功能
-}
-
-// 导出结果
+function loadHistory() {}
 function exportResults() {
     alert('导出功能开发中...');
 }
