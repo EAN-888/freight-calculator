@@ -1,5 +1,19 @@
-// 木虾物流运费查询系统 v4.0 - 完整数据版本
+// 木虾物流运费查询系统 v4.1 - 修复国家选择器
 // 数据来源：腾讯文档 https://docs.qq.com/sheet/DRm1UQWp2aXlVZW1s
+
+// 国家数据
+const countries = [
+    {code: 'US', name: '美国', nameEn: 'United States'},
+    {code: 'CA', name: '加拿大', nameEn: 'Canada'},
+    {code: 'GB', name: '英国', nameEn: 'United Kingdom'},
+    {code: 'DE', name: '德国', nameEn: 'Germany'},
+    {code: 'FR', name: '法国', nameEn: 'France'},
+    {code: 'IT', name: '意大利', nameEn: 'Italy'},
+    {code: 'ES', name: '西班牙', nameEn: 'Spain'},
+    {code: 'AU', name: '澳大利亚', nameEn: 'Australia'},
+    {code: 'JP', name: '日本', nameEn: 'Japan'},
+    {code: 'KR', name: '韩国', nameEn: 'South Korea'}
+];
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
@@ -13,7 +27,7 @@ function updateDataInfo() {
     const infoDiv = document.createElement('div');
     infoDiv.className = 'info-banner';
     infoDiv.innerHTML = `
-        💡 数据版本：v4.0 | 最后更新：2026-04-10 14:43<br>
+        💡 数据版本：v4.1 | 最后更新：2026-04-10 14:53<br>
         📊 数据来源：腾讯文档 | 总计：5 个 Sheet, 100+ 个渠道
     `;
     const searchSection = document.querySelector('.search-section');
@@ -23,6 +37,13 @@ function updateDataInfo() {
 // 初始化国家选择器
 function initCountrySelect() {
     const select = document.getElementById('country');
+    if (!select) return;
+    
+    // 清空现有选项（除了第一个）
+    while (select.options.length > 1) {
+        select.remove(1);
+    }
+    
     countries.forEach(country => {
         const option = document.createElement('option');
         option.value = country.code;
@@ -61,7 +82,7 @@ async function searchFreight() {
     }, 300);
 }
 
-// 计算运费 v4.0
+// 计算运费 v4.1
 function calculateFreight(country, weight, serviceType, cargoType) {
     const results = [];
 
