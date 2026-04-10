@@ -1,4 +1,4 @@
-// 木虾物流运费查询系统
+// 木虾物流运费查询系统 - 更新版
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
@@ -63,7 +63,7 @@ function calculateFreight(country, weight, serviceType, cargoType) {
         }
 
         // 检查货物类型
-        if (rate.cargoType !== cargoType && rate.cargoType !== '普货') {
+        if (cargoType !== '普货' && rate.cargoType !== cargoType) {
             return;
         }
 
@@ -89,31 +89,80 @@ function calculateFreight(country, weight, serviceType, cargoType) {
             // 统一单价计费
             basePrice = weight * rate.unitPrice;
             priceDetail = `${rate.unitPrice}元/kg × ${weight}kg`;
+        } else {
+            // 需要特殊处理的渠道（如联邦、UPS等）
+            return;
         }
 
         // 计算附加费
         let additionalFees = [];
         let totalAdditional = 0;
 
-        if (rate.additionalFee.fuel && rate.additionalFee.fuel > 0) {
+        // 木制品附加费
+        if (rate.additionalFee.wood && (cargoType === '带电' || cargoType === '敏感货' || 
+            (cargoType === '普货' && weight > 10))) { // 简化判断
+            const woodFee = rate.additionalFee.wood;
+            totalAdditional += woodFee * weight;
+            additionalFees.push(`木制品：${(woodFee * weight).toFixed(2)}元`);
+        }
+
+        // 纺织品附加费
+        if (rate.additionalFee.textile) {
+            const textileFee = rate.additionalFee.textile;
+            totalAdditional += textileFee * weight;
+            additionalFees.push(`纺织品：${(textileFee * weight).toFixed(2)}元`);
+        }
+
+        // 带电附加费
+        if (rate.additionalFee.battery && cargoType === '带电') {
+            const batteryFee = rate.additionalFee.battery;
+            totalAdditional += batteryFee * weight;
+            additionalFees.push(`带电：${(batteryFee * weight).toFixed(2)}元`);
+        }
+
+        // 带磁附加费
+        if (rate.additionalFee.magnet && cargoType === '带磁') {
+            const magnetFee = rate.additionalFee.magnet;
+            totalAdditional += magnetFee * weight;
+            additionalFees.push(`带磁：${(magnetFee * weight).toFixed(2)}元`);
+        }
+
+        // 笔类附加费
+        if (rate.additionalFee.pen) {
+            const penFee = rate.additionalFee.pen;
+            totalAdditional += penFee * weight;
+            additionalFees.push(`笔类：${(penFee * weight).toFixed(2)}元`);
+        }
+
+        // 偏远费
+        if (rate.additionalFee.remote) {
+            totalAdditional += rate.additionalFee.remote;
+            additionalFees.push(`偏远：${rate.additionalFee.remote}元`);
+        }
+
+        // 燃油附加费
+        if (rate.additionalFee.fuel) {
             const fuelFee = basePrice * rate.additionalFee.fuel;
             totalAdditional += fuelFee;
             additionalFees.push(`燃油：${fuelFee.toFixed(2)}元`);
         }
 
-        if (rate.additionalFee.remote && rate.additionalFee.remote > 0) {
-            totalAdditional += rate.additionalFee.remote;
-            additionalFees.push(`偏远：${rate.additionalFee.remote}元`);
+        // 清关费/关税
+        if (rate.additionalFee.customs) {
+            totalAdditional += rate.additionalFee.customs;
+            additionalFees.push(`清关：${rate.additionalFee.customs}元`);
         }
 
-        if (rate.additionalFee.battery && rate.additionalFee.battery > 0) {
-            totalAdditional += rate.additionalFee.battery;
-            additionalFees.push(`带电：${rate.additionalFee.battery}元`);
+        // 手续费
+        if (rate.additionalFee.handling) {
+            totalAdditional += rate.additionalFee.handling;
+            additionalFees.push(`手续费：${rate.additionalFee.handling}元`);
         }
 
-        if (rate.additionalFee.port && rate.additionalFee.port > 0) {
-            totalAdditional += rate.additionalFee.port;
-            additionalFees.push(`港口：${rate.additionalFee.port}元`);
+        // 超重费
+        if (rate.additionalFee.heavy && weight > 32) {
+            totalAdditional += rate.additionalFee.heavy;
+            additionalFees.push(`超重：${rate.additionalFee.heavy}元`);
         }
 
         const totalPrice = basePrice + totalAdditional;
