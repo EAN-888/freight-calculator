@@ -111,13 +111,81 @@
             <div class="form-row">
                 <div class="form-group">
                     <label for="warehouseCode">仓库编码</label>
-                    <input type="text" id="warehouseCode" placeholder="可选，如：LAX01">
+                    <select id="warehouseCode" onchange="onWarehouseChange()">
+                        <option value="">请选择或直接输入邮编</option>
+                        <optgroup label="美西地区">
+                            <option value="LAX1">LAX1 - Los Angeles, CA 90058</option>
+                            <option value="LAX9">LAX9 - Los Angeles, CA 90058</option>
+                            <option value="LGB1">LGB1 - Long Beach, CA 90810</option>
+                            <option value="LGB8">LGB8 - Long Beach, CA 90810</option>
+                            <option value="ONT1">ONT1 - Ontario, CA 91761</option>
+                            <option value="ONT2">ONT2 - Ontario, CA 91761</option>
+                            <option value="ONT3">ONT3 - Ontario, CA 91761</option>
+                            <option value="ONT8">ONT8 - Ontario, CA 91761</option>
+                            <option value="ONT9">ONT9 - Ontario, CA 91761</option>
+                            <option value="SMF1">SMF1 - Stockton, CA 95215</option>
+                            <option value="SMF2">SMF2 - Stockton, CA 95215</option>
+                            <option value="SMF3">SMF3 - Stockton, CA 95215</option>
+                            <option value="SMF6">SMF6 - Stockton, CA 95215</option>
+                            <option value="SMF8">SMF8 - Stockton, CA 95215</option>
+                            <option value="SEA1">SEA1 - Seattle, WA 98108</option>
+                            <option value="SEA8">SEA8 - Seattle, WA 98108</option>
+                            <option value="PDX1">PDX1 - Portland, OR 97230</option>
+                            <option value="PDX8">PDX8 - Portland, OR 97230</option>
+                            <option value="PHX1">PHX1 - Phoenix, AZ 85043</option>
+                            <option value="PHX7">PHX7 - Phoenix, AZ 85043</option>
+                            <option value="LAS1">LAS1 - Las Vegas, NV 89115</option>
+                            <option value="LAS6">LAS6 - Las Vegas, NV 89115</option>
+                        </optgroup>
+                        <optgroup label="美中地区">
+                            <option value="CHI1">CHI1 - Chicago, IL 60609</option>
+                            <option value="CHI2">CHI2 - Chicago, IL 60609</option>
+                            <option value="MDW2">MDW2 - Chicago, IL 60638</option>
+                            <option value="MDW4">MDW4 - Chicago, IL 60638</option>
+                            <option value="MDW6">MDW6 - Chicago, IL 60638</option>
+                            <option value="MDW8">MDW8 - Chicago, IL 60638</option>
+                            <option value="DFW1">DFW1 - Dallas, TX 75212</option>
+                            <option value="DFW6">DFW6 - Dallas, TX 75212</option>
+                            <option value="HOU1">HOU1 - Houston, TX 77002</option>
+                            <option value="HOU6">HOU6 - Houston, TX 77002</option>
+                            <option value="IND1">IND1 - Indianapolis, IN 46241</option>
+                            <option value="IND6">IND6 - Indianapolis, IN 46241</option>
+                            <option value="IND9">IND9 - Indianapolis, IN 46241</option>
+                            <option value="MCI1">MCI1 - Kansas City, MO 64120</option>
+                            <option value="MCI6">MCI6 - Kansas City, MO 64120</option>
+                            <option value="STL1">STL1 - St. Louis, MO 63114</option>
+                            <option value="STL6">STL6 - St. Louis, MO 63114</option>
+                        </optgroup>
+                        <optgroup label="美东地区">
+                            <option value="ATL1">ATL1 - Atlanta, GA 30336</option>
+                            <option value="ATL6">ATL6 - Atlanta, GA 30336</option>
+                            <option value="BWI1">BWI1 - Baltimore, MD 21224</option>
+                            <option value="BWI6">BWI6 - Baltimore, MD 21224</option>
+                            <option value="BOS1">BOS1 - Boston, MA 02128</option>
+                            <option value="BOS6">BOS6 - Boston, MA 02128</option>
+                            <option value="CLT1">CLT1 - Charlotte, NC 28208</option>
+                            <option value="CLT6">CLT6 - Charlotte, NC 28208</option>
+                            <option value="CVG1">CVG1 - Cincinnati, OH 45241</option>
+                            <option value="CVG6">CVG6 - Cincinnati, OH 45241</option>
+                            <option value="CLE1">CLE1 - Cleveland, OH 44135</option>
+                            <option value="CLE6">CLE6 - Cleveland, OH 44135</option>
+                            <option value="CMH1">CMH1 - Columbus, OH 43228</option>
+                            <option value="CMH6">CMH6 - Columbus, OH 43228</option>
+                            <option value="IAD1">IAD1 - Washington, VA 20166</option>
+                            <option value="IAD6">IAD6 - Washington, VA 20166</option>
+                            <option value="MIA1">MIA1 - Miami, FL 33166</option>
+                            <option value="MIA6">MIA6 - Miami, FL 33166</option>
+                            <option value="TPA1">TPA1 - Tampa, FL 33619</option>
+                            <option value="TPA6">TPA6 - Tampa, FL 33619</option>
+                        </optgroup>
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="zipCode">邮编</label>
                     <input type="text" id="zipCode" placeholder="可选，如：90210" oninput="autoSelectRegion()">
                 </div>
             </div>
+            <p class="region-hint">💡 选择仓库或输入邮编后，系统会自动选择对应区域</p>
         </div>
         
         <div class="form-group">
@@ -158,6 +226,7 @@
     </div>
     
     <script src="data/rates.js"></script>
+    <script src="data/amazon_warehouses.js"></script>
     <script>
         let currentResults = [];
         let currentSort = { column: 'totalPrice', direction: 'asc' };
@@ -175,18 +244,51 @@
             }
         }
         
-        function autoSelectRegion() {
-            const zipCode = document.getElementById('zipCode').value.trim();
+        function onWarehouseChange() {
+            const warehouseCode = document.getElementById('warehouseCode').value;
+            const zipCodeInput = document.getElementById('zipCode');
             const autoHint = document.getElementById('autoHint');
             
+            if (!warehouseCode) {
+                zipCodeInput.value = '';
+                autoHint.classList.remove('show');
+                return;
+            }
+            
+            const info = getWarehouseInfo(warehouseCode);
+            if (info) {
+                zipCodeInput.value = info.zip;
+                autoSelectRegion();
+            }
+        }
+        
+        function autoSelectRegion() {
+            const zipCode = document.getElementById('zipCode').value.trim();
+            const warehouseCode = document.getElementById('warehouseCode').value;
+            const autoHint = document.getElementById('autoHint');
+            
+            let regionIndex = 0;
+            
+            // 优先从仓库代码获取区域
+            if (warehouseCode) {
+                const info = getWarehouseInfo(warehouseCode);
+                if (info) {
+                    regionIndex = info.region === '美西' ? 0 : info.region === '美中' ? 1 : 2;
+                    autoHint.textContent = '✅ 已根据仓库代码自动选择区域 (' + info.city + ', ' + info.state + ')';
+                    autoHint.classList.add('show');
+                    const radio = document.querySelector(`input[name="region"][value="${regionIndex}"]`);
+                    if (radio) radio.checked = true;
+                    return;
+                }
+            }
+            
+            // 从邮编获取区域
             if (!zipCode || zipCode.length < 5) {
                 autoHint.classList.remove('show');
                 return;
             }
             
             const firstDigit = parseInt(zipCode.charAt(0));
-            let regionIndex = 0;
-            
             if (firstDigit >= 8 || firstDigit === 9) {
                 regionIndex = 0; // 美西
             } else if (firstDigit >= 4 && firstDigit <= 7) {
@@ -199,6 +301,7 @@
             const radio = document.querySelector(`input[name="region"][value="${regionIndex}"]`);
             if (radio) {
                 radio.checked = true;
+                autoHint.textContent = '✅ 已根据邮编自动选择区域';
                 autoHint.classList.add('show');
             }
         }
