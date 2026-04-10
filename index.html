@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>木虾物流运费查询系统 - 测试版 v5.2</title>
+    <title>木虾物流运费查询系统 - v5.3 区域版</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 1400px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
         .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -14,6 +14,14 @@
         select, input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; box-sizing: border-box; }
         .form-row { display: flex; gap: 15px; }
         .form-row .form-group { flex: 1; }
+        .region-selector { display: none; background-color: #f0f8ff; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #b3d9ff; }
+        .region-selector.active { display: block; }
+        .region-options { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+        .region-option { flex: 1; min-width: 120px; }
+        .region-option label { display: block; padding: 10px; background-color: white; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; text-align: center; transition: all 0.2s; }
+        .region-option input[type="radio"] { display: none; }
+        .region-option input[type="radio"]:checked + label { background-color: #007bff; color: white; border-color: #007bff; }
+        .region-option label:hover { border-color: #007bff; }
         button { background-color: #007bff; color: white; padding: 12px 24px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-right: 10px; margin-top: 10px; }
         button:hover { background-color: #0056b3; }
         .btn-secondary { background-color: #6c757d; }
@@ -33,6 +41,9 @@
         .badge-sea { background-color: #28a745; color: white; }
         .badge-rail { background-color: #ffc107; color: black; }
         .badge-truck { background-color: #17a2b8; color: white; }
+        .badge-us-west { background-color: #20c997; color: white; }
+        .badge-us-central { background-color: #fd7e14; color: white; }
+        .badge-us-east { background-color: #dc3545; color: white; }
         .price { font-weight: bold; color: #28a745; white-space: nowrap; }
         .loading { text-align: center; padding: 20px; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 40px; height: 40px; animation: spin 2s linear infinite; margin: 0 auto 15px; }
@@ -40,18 +51,20 @@
         .filter-input { width: 95%; padding: 5px 8px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px; margin-top: 5px; box-sizing: border-box; }
         .filter-row { background-color: #fafafa; }
         .filter-row th { padding: 8px; border-top: none; }
+        .region-hint { font-size: 12px; color: #666; margin-top: 5px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📦 木虾物流运费查询系统</h1>
         <div class="info-banner">
-            💡 数据版本：v5.2 | 更新时间：2026-04-10 17:35<br>
-            📊 完整数据：66 个活跃渠道 | 支持排序和筛选
+            💡 数据版本：v5.3 | 更新时间：2026-04-10 17:45<br>
+            📊 支持美国区域选择：美西/美中/美东 | 66 个活跃渠道
         </div>
+        
         <div class="form-group">
             <label for="country">目的国 *</label>
-            <select id="country">
+            <select id="country" onchange="onCountryChange()">
                 <option value="">请选择国家</option>
                 <option value="US">美国 (United States)</option>
                 <option value="CA">加拿大 (Canada)</option>
@@ -59,10 +72,41 @@
                 <option value="DE">德国 (Germany)</option>
             </select>
         </div>
+        
+        <!-- 美国区域选择 -->
+        <div id="regionSelector" class="region-selector">
+            <label>美国区域选择 *</label>
+            <div class="region-options">
+                <div class="region-option">
+                    <input type="radio" id="region_west" name="region" value="0" checked>
+                    <label for="region_west">
+                        <strong>美西</strong><br>
+                        <small>邮编 8-9</small>
+                    </label>
+                </div>
+                <div class="region-option">
+                    <input type="radio" id="region_central" name="region" value="1">
+                    <label for="region_central">
+                        <strong>美中</strong><br>
+                        <small>邮编 4-7</small>
+                    </label>
+                </div>
+                <div class="region-option">
+                    <input type="radio" id="region_east" name="region" value="2">
+                    <label for="region_east">
+                        <strong>美东</strong><br>
+                        <small>邮编 0-3</small>
+                    </label>
+                </div>
+            </div>
+            <p class="region-hint">💡 不同区域价格不同，美西最便宜，美东最贵</p>
+        </div>
+        
         <div class="form-group">
             <label for="weight">重量 (kg) *</label>
             <input type="number" id="weight" placeholder="输入货物重量" min="0.1" step="0.1" value="50">
         </div>
+        
         <div class="form-row">
             <div class="form-group">
                 <label for="serviceType">服务类型</label>
@@ -88,28 +132,62 @@
                 </select>
             </div>
         </div>
+        
         <button onclick="searchFreight()">🔍 搜索运费</button>
         <button onclick="resetForm()" class="btn-secondary">🔄 重置</button>
+        
         <div id="results"><p>请输入查询条件，点击搜索查看运费报价</p></div>
     </div>
+    
     <script src="data/rates.js"></script>
     <script>
         let currentResults = [];
         let currentSort = { column: 'totalPrice', direction: 'asc' };
+        
+        function onCountryChange() {
+            const country = document.getElementById('country').value;
+            const regionSelector = document.getElementById('regionSelector');
+            if (country === 'US') {
+                regionSelector.classList.add('active');
+            } else {
+                regionSelector.classList.remove('active');
+            }
+        }
+        
+        function getRegionIndex() {
+            const regionRadios = document.getElementsByName('region');
+            for (let i = 0; i < regionRadios.length; i++) {
+                if (regionRadios[i].checked) {
+                    return parseInt(regionRadios[i].value);
+                }
+            }
+            return 0;
+        }
+        
+        function getRegionName(index) {
+            const names = ['美西', '美中', '美东'];
+            return names[index] || '';
+        }
         
         function searchFreight() {
             const country = document.getElementById('country').value;
             const weight = parseFloat(document.getElementById('weight').value);
             const serviceType = document.getElementById('serviceType').value;
             const cargoType = document.getElementById('cargoType').value || '普货';
+            const regionIndex = getRegionIndex();
+            
             if (!country) { alert('请选择目的国'); return; }
             if (!weight || weight <= 0) { alert('请输入有效的重量'); return; }
+            if (country === 'US' && document.getElementById('regionSelector').classList.contains('active')) {
+                // 美国需要选择区域（默认美西）
+            }
+            
             document.getElementById('results').innerHTML = '<div class="loading"><div class="spinner"></div><p>正在计算运费...</p></div>';
             setTimeout(() => {
                 try {
-                    currentResults = calculateFreight(country, weight, serviceType, cargoType);
+                    currentResults = calculateFreight(country, weight, serviceType, cargoType, regionIndex);
                     currentSort = { column: 'totalPrice', direction: 'asc' };
-                    displayResults(currentResults, weight);
+                    displayResults(currentResults, weight, regionIndex);
                 } catch (error) {
                     console.error('Error:', error);
                     document.getElementById('results').innerHTML = '<div style="color: red;"><h3>❌ 计算出错</h3><p>' + error.message + '</p></div>';
@@ -117,7 +195,7 @@
             }, 100);
         }
         
-        function calculateFreight(country, weight, serviceType, cargoType) {
+        function calculateFreight(country, weight, serviceType, cargoType, regionIndex) {
             const results = [];
             freightRates.forEach(rate => {
                 if (!rate.countries.includes(country)) return;
@@ -129,8 +207,10 @@
                     for (const range of rate.weightRanges) {
                         if (weight >= range.min && (range.max === null || weight < range.max)) {
                             if (Array.isArray(range.price)) {
-                                basePrice = weight * range.price[0];
-                                priceDetail = range.price[0] + '元/KG × ' + weight + 'kg';
+                                // 区域定价（美国）
+                                const price = range.price[regionIndex] || range.price[0];
+                                basePrice = weight * price;
+                                priceDetail = price + '元/KG × ' + weight + 'kg';
                             } else if (range.price !== null) {
                                 basePrice = weight * range.price;
                                 priceDetail = range.price + '元/KG × ' + weight + 'kg';
@@ -140,15 +220,14 @@
                     }
                 }
                 if (basePrice === 0) return;
-                let additionalFees = [];
-                let totalAdditional = 0;
                 let feeDetails = [];
+                let totalAdditional = 0;
                 if (rate.additionalFees) {
                     for (const [feeType, feeInfo] of Object.entries(rate.additionalFees)) {
                         let feeAmount = 0;
                         if (feeInfo.type === 'per_kg') {
                             feeAmount = feeInfo.amount * weight;
-                            feeDetails.push(getFeeName(feeType) + ': ' + feeInfo.amount + '元/KG');
+                            feeDetails.push(getFeeName(feeInfo) + ': ' + feeInfo.amount + '元/KG');
                         } else if (feeInfo.type === 'per_ticket') {
                             feeAmount = feeInfo.amount;
                             feeDetails.push(getFeeName(feeType) + ': ' + feeInfo.amount + '元/票');
@@ -170,7 +249,6 @@
                     basePrice: basePrice,
                     priceDetail: priceDetail,
                     feeDetails: feeDetails,
-                    additionalFees: additionalFees,
                     totalAdditional: totalAdditional,
                     totalPrice: totalPrice,
                     deliveryTime: rate.deliveryTime,
@@ -181,19 +259,24 @@
             return results;
         }
         
-        function getFeeName(type) {
+        function getFeeName(feeInfo) {
             const names = { wood: '木制品', textile: '纺织品', battery: '带电', magnet: '带磁', pen: '笔类', customs: '清关费', handling: '手续费', delivery: '派送费', remote: '偏远费', overWeight: '超重费', liquid_pen: '液体笔', glasses: '眼镜', accessory: '配套', shoes: '鞋类', liquid: '液体', fumigation: '熏蒸费' };
-            return names[type] || type;
+            return names[Object.keys(feeInfo)[0]] || Object.keys(feeInfo)[0];
         }
         
-        function displayResults(results, weight) {
+        function displayResults(results, weight, regionIndex) {
             const container = document.getElementById('results');
             if (results.length === 0) {
                 container.innerHTML = '<div style="color: #666;"><h3>😕 暂无符合条件的报价</h3><p>请尝试调整筛选条件</p></div>';
                 return;
             }
+            const regionName = getRegionName(regionIndex);
             let html = '<h3>✅ 找到 ' + results.length + ' 个报价方案</h3>';
-            html += '<p><strong>查询条件:</strong> ' + document.getElementById('country').options[document.getElementById('country').selectedIndex].text + ', ' + weight + 'kg</p>';
+            html += '<p><strong>查询条件:</strong> ' + document.getElementById('country').options[document.getElementById('country').selectedIndex].text;
+            if (regionName) {
+                html += ' <span class="badge badge-us-' + (regionIndex === 0 ? 'west' : regionIndex === 1 ? 'central' : 'east') + '">' + regionName + '</span>';
+            }
+            html += ', ' + weight + 'kg</p>';
             html += '<div style="overflow-x: auto;"><table class="results-table">';
             html += '<thead>';
             html += '<tr>';
@@ -270,7 +353,6 @@
                 }
             });
             
-            // 更新表头样式
             document.querySelectorAll('.results-table th.sortable').forEach(th => {
                 th.classList.remove('asc', 'desc');
                 if (th.getAttribute('data-column') === column) {
@@ -278,9 +360,9 @@
                 }
             });
             
-            // 重新渲染表格（保留筛选条件）
             const weight = parseFloat(document.getElementById('weight').value);
-            displayResults(currentResults, weight);
+            const regionIndex = getRegionIndex();
+            displayResults(currentResults, weight, regionIndex);
         }
         
         function filterTable(columnIndex, value) {
@@ -308,6 +390,7 @@
             document.getElementById('cargoType').value = '';
             document.getElementById('results').innerHTML = '<p>请输入查询条件，点击搜索查看运费报价</p>';
             currentResults = [];
+            document.getElementById('regionSelector').classList.remove('active');
         }
     </script>
 </body>
