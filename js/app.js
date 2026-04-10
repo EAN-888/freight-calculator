@@ -1,4 +1,4 @@
-// 木虾物流运费查询系统 v4.1 - 修复国家选择器
+// 木虾物流运费查询系统 v4.2 - 完整修复版
 // 数据来源：腾讯文档 https://docs.qq.com/sheet/DRm1UQWp2aXlVZW1s
 
 // 国家数据
@@ -17,6 +17,7 @@ const countries = [
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initializing freight calculator...');
     initCountrySelect();
     loadHistory();
     updateDataInfo();
@@ -27,17 +28,22 @@ function updateDataInfo() {
     const infoDiv = document.createElement('div');
     infoDiv.className = 'info-banner';
     infoDiv.innerHTML = `
-        💡 数据版本：v4.1 | 最后更新：2026-04-10 14:53<br>
+        💡 数据版本：v4.2 | 最后更新：2026-04-10 15:15<br>
         📊 数据来源：腾讯文档 | 总计：5 个 Sheet, 100+ 个渠道
     `;
     const searchSection = document.querySelector('.search-section');
-    searchSection.insertBefore(infoDiv, document.querySelector('.form-group'));
+    if (searchSection) {
+        searchSection.insertBefore(infoDiv, document.querySelector('.form-group'));
+    }
 }
 
 // 初始化国家选择器
 function initCountrySelect() {
     const select = document.getElementById('country');
-    if (!select) return;
+    if (!select) {
+        console.error('Country select element not found');
+        return;
+    }
     
     // 清空现有选项（除了第一个）
     while (select.options.length > 1) {
@@ -50,6 +56,8 @@ function initCountrySelect() {
         option.textContent = `${country.name} (${country.nameEn})`;
         select.appendChild(option);
     });
+    
+    console.log('Country select initialized with', countries.length, 'countries');
 }
 
 // 搜索运费
@@ -76,14 +84,29 @@ async function searchFreight() {
     `;
 
     setTimeout(() => {
-        const results = calculateFreight(country, weight, serviceType, cargoType);
-        displayResults(results, weight);
-        saveHistory(country, weight, serviceType, cargoType);
+        try {
+            const results = calculateFreight(country, weight, serviceType, cargoType);
+            displayResults(results, weight);
+            saveHistory(country, weight, serviceType, cargoType);
+        } catch (error) {
+            console.error('Error calculating freight:', error);
+            document.getElementById('results').innerHTML = `
+                <div class="empty-state">
+                    <div class="icon">❌</div>
+                    <p>计算出错，请重试</p>
+                    <p style="margin-top: 10px; font-size: 0.9em;">错误详情已记录到控制台</p>
+                </div>
+            `;
+        }
     }, 300);
 }
 
-// 计算运费 v4.1
+// 计算运费 v4.2
 function calculateFreight(country, weight, serviceType, cargoType) {
+    if (!window.freightRates) {
+        throw new Error('freightRates data not loaded');
+    }
+    
     const results = [];
 
     freightRates.forEach(rate => {
