@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>木虾物流运费查询系统 - v5.3 区域版</title>
+    <title>木虾物流运费查询系统 - v5.4 增强版</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 1400px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
         .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -12,6 +12,7 @@
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
         select, input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; box-sizing: border-box; }
+        input[readonly] { background-color: #f0f0f0; cursor: not-allowed; }
         .form-row { display: flex; gap: 15px; }
         .form-row .form-group { flex: 1; }
         .region-selector { display: none; background-color: #f0f8ff; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #b3d9ff; }
@@ -52,14 +53,16 @@
         .filter-row { background-color: #fafafa; }
         .filter-row th { padding: 8px; border-top: none; }
         .region-hint { font-size: 12px; color: #666; margin-top: 5px; }
+        .auto-hint { font-size: 12px; color: #28a745; margin-top: 5px; display: none; }
+        .auto-hint.show { display: block; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📦 木虾物流运费查询系统</h1>
         <div class="info-banner">
-            💡 数据版本：v5.3 | 更新时间：2026-04-10 17:45<br>
-            📊 支持美国区域选择：美西/美中/美东 | 66 个活跃渠道
+            💡 数据版本：v5.4 | 更新时间：2026-04-10 18:15<br>
+            📊 支持美国区域选择：美西/美中/美东 | 30 个活跃渠道
         </div>
         
         <div class="form-group">
@@ -100,6 +103,21 @@
                 </div>
             </div>
             <p class="region-hint">💡 不同区域价格不同，美西最便宜，美东最贵</p>
+            <p id="autoHint" class="auto-hint">✅ 已根据邮编自动选择区域</p>
+        </div>
+        
+        <!-- 美国附加信息 -->
+        <div id="usExtraFields" style="display: none;">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="warehouseCode">仓库编码</label>
+                    <input type="text" id="warehouseCode" placeholder="可选，如：LAX01">
+                </div>
+                <div class="form-group">
+                    <label for="zipCode">邮编</label>
+                    <input type="text" id="zipCode" placeholder="可选，如：90210" oninput="autoSelectRegion()">
+                </div>
+            </div>
         </div>
         
         <div class="form-group">
@@ -147,10 +165,41 @@
         function onCountryChange() {
             const country = document.getElementById('country').value;
             const regionSelector = document.getElementById('regionSelector');
+            const usExtraFields = document.getElementById('usExtraFields');
             if (country === 'US') {
                 regionSelector.classList.add('active');
+                usExtraFields.style.display = 'block';
             } else {
                 regionSelector.classList.remove('active');
+                usExtraFields.style.display = 'none';
+            }
+        }
+        
+        function autoSelectRegion() {
+            const zipCode = document.getElementById('zipCode').value.trim();
+            const autoHint = document.getElementById('autoHint');
+            
+            if (!zipCode || zipCode.length < 5) {
+                autoHint.classList.remove('show');
+                return;
+            }
+            
+            const firstDigit = parseInt(zipCode.charAt(0));
+            let regionIndex = 0;
+            
+            if (firstDigit >= 8 || firstDigit === 9) {
+                regionIndex = 0; // 美西
+            } else if (firstDigit >= 4 && firstDigit <= 7) {
+                regionIndex = 1; // 美中
+            } else {
+                regionIndex = 2; // 美东
+            }
+            
+            // 自动选择区域
+            const radio = document.querySelector(`input[name="region"][value="${regionIndex}"]`);
+            if (radio) {
+                radio.checked = true;
+                autoHint.classList.add('show');
             }
         }
         
@@ -175,19 +224,18 @@
             const serviceType = document.getElementById('serviceType').value;
             const cargoType = document.getElementById('cargoType').value || '普货';
             const regionIndex = getRegionIndex();
+            const warehouseCode = document.getElementById('warehouseCode').value;
+            const zipCode = document.getElementById('zipCode').value;
             
             if (!country) { alert('请选择目的国'); return; }
             if (!weight || weight <= 0) { alert('请输入有效的重量'); return; }
-            if (country === 'US' && document.getElementById('regionSelector').classList.contains('active')) {
-                // 美国需要选择区域（默认美西）
-            }
             
-            document.getElementById('results').innerHTML = '<div class="loading"><div class="spinner"></div><p>正在计算运费...</p></div>';
+            document.getElementById('results').innerHTML = '<div class="loading"><div class="spinner"></div><p>正在计算运费...' + (warehouseCode ? ' 仓库：' + warehouseCode : '') + '</p></div>';
             setTimeout(() => {
                 try {
                     currentResults = calculateFreight(country, weight, serviceType, cargoType, regionIndex);
                     currentSort = { column: 'totalPrice', direction: 'asc' };
-                    displayResults(currentResults, weight, regionIndex);
+                    displayResults(currentResults, weight, regionIndex, warehouseCode, zipCode);
                 } catch (error) {
                     console.error('Error:', error);
                     document.getElementById('results').innerHTML = '<div style="color: red;"><h3>❌ 计算出错</h3><p>' + error.message + '</p></div>';
@@ -207,7 +255,6 @@
                     for (const range of rate.weightRanges) {
                         if (weight >= range.min && (range.max === null || weight < range.max)) {
                             if (Array.isArray(range.price)) {
-                                // 区域定价（美国）
                                 const price = range.price[regionIndex] || range.price[0];
                                 basePrice = weight * price;
                                 priceDetail = price + '元/KG × ' + weight + 'kg';
@@ -264,7 +311,7 @@
             return names[Object.keys(feeInfo)[0]] || Object.keys(feeInfo)[0];
         }
         
-        function displayResults(results, weight, regionIndex) {
+        function displayResults(results, weight, regionIndex, warehouseCode, zipCode) {
             const container = document.getElementById('results');
             if (results.length === 0) {
                 container.innerHTML = '<div style="color: #666;"><h3>😕 暂无符合条件的报价</h3><p>请尝试调整筛选条件</p></div>';
@@ -275,6 +322,12 @@
             html += '<p><strong>查询条件:</strong> ' + document.getElementById('country').options[document.getElementById('country').selectedIndex].text;
             if (regionName) {
                 html += ' <span class="badge badge-us-' + (regionIndex === 0 ? 'west' : regionIndex === 1 ? 'central' : 'east') + '">' + regionName + '</span>';
+            }
+            if (warehouseCode) {
+                html += ' | 仓库：' + warehouseCode;
+            }
+            if (zipCode) {
+                html += ' | 邮编：' + zipCode;
             }
             html += ', ' + weight + 'kg</p>';
             html += '<div style="overflow-x: auto;"><table class="results-table">';
@@ -320,7 +373,6 @@
             html += '</tbody></table></div>';
             container.innerHTML = html;
             
-            // 添加排序事件
             document.querySelectorAll('.results-table th.sortable').forEach(th => {
                 th.addEventListener('click', function() {
                     const column = this.getAttribute('data-column');
@@ -362,7 +414,9 @@
             
             const weight = parseFloat(document.getElementById('weight').value);
             const regionIndex = getRegionIndex();
-            displayResults(currentResults, weight, regionIndex);
+            const warehouseCode = document.getElementById('warehouseCode').value;
+            const zipCode = document.getElementById('zipCode').value;
+            displayResults(currentResults, weight, regionIndex, warehouseCode, zipCode);
         }
         
         function filterTable(columnIndex, value) {
@@ -388,9 +442,13 @@
             document.getElementById('weight').value = '50';
             document.getElementById('serviceType').value = '';
             document.getElementById('cargoType').value = '';
+            document.getElementById('warehouseCode').value = '';
+            document.getElementById('zipCode').value = '';
             document.getElementById('results').innerHTML = '<p>请输入查询条件，点击搜索查看运费报价</p>';
             currentResults = [];
             document.getElementById('regionSelector').classList.remove('active');
+            document.getElementById('usExtraFields').style.display = 'none';
+            document.getElementById('autoHint').classList.remove('show');
         }
     </script>
 </body>
