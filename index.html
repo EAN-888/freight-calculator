@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>木虾物流运费查询系统 - v5.4 增强版</title>
+    <title>木虾物流运费查询系统 - v5.5 智能版</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 1400px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
         .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -12,7 +12,6 @@
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
         select, input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 16px; box-sizing: border-box; }
-        input[readonly] { background-color: #f0f0f0; cursor: not-allowed; }
         .form-row { display: flex; gap: 15px; }
         .form-row .form-group { flex: 1; }
         .region-selector { display: none; background-color: #f0f8ff; padding: 15px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #b3d9ff; }
@@ -61,8 +60,8 @@
     <div class="container">
         <h1>📦 木虾物流运费查询系统</h1>
         <div class="info-banner">
-            💡 数据版本：v5.4 | 更新时间：2026-04-10 18:15<br>
-            📊 支持美国区域选择：美西/美中/美东 | 30 个活跃渠道
+            💡 数据版本：v5.5 | 更新时间：2026-04-10 18:30<br>
+            📊 支持美国区域选择：美西/美中/美东 | 支持仓库代码自动识别 | 66 个活跃渠道
         </div>
         
         <div class="form-group">
@@ -78,10 +77,10 @@
         
         <!-- 美国区域选择 -->
         <div id="regionSelector" class="region-selector">
-            <label>美国区域选择 *</label>
+            <label>美国区域选择 <span style="font-weight: normal; color: #666;">(选填仓库代码时可不选，系统自动识别)</span></label>
             <div class="region-options">
                 <div class="region-option">
-                    <input type="radio" id="region_west" name="region" value="0" checked>
+                    <input type="radio" id="region_west" name="region" value="0">
                     <label for="region_west">
                         <strong>美西</strong><br>
                         <small>邮编 8-9</small>
@@ -95,7 +94,7 @@
                     </label>
                 </div>
                 <div class="region-option">
-                    <input type="radio" id="region_east" name="region" value="2">
+                    <input type="radio" id="region_east" name="region" value="2" checked>
                     <label for="region_east">
                         <strong>美东</strong><br>
                         <small>邮编 0-3</small>
@@ -103,7 +102,7 @@
                 </div>
             </div>
             <p class="region-hint">💡 不同区域价格不同，美西最便宜，美东最贵</p>
-            <p id="autoHint" class="auto-hint">✅ 已根据邮编自动选择区域</p>
+            <p id="autoHint" class="auto-hint">✅ 已根据仓库代码自动选择区域</p>
         </div>
         
         <!-- 美国附加信息 -->
@@ -276,7 +275,7 @@
                     regionIndex = info.region === '美西' ? 0 : info.region === '美中' ? 1 : 2;
                     autoHint.textContent = '✅ 已根据仓库代码自动选择区域 (' + info.city + ', ' + info.state + ')';
                     autoHint.classList.add('show');
-                    const radio = document.querySelector(`input[name="region"][value="${regionIndex}"]`);
+                    const radio = document.querySelector('input[name="region"][value="' + regionIndex + '"]');
                     if (radio) radio.checked = true;
                     return;
                 }
@@ -298,7 +297,7 @@
             }
             
             // 自动选择区域
-            const radio = document.querySelector(`input[name="region"][value="${regionIndex}"]`);
+            const radio = document.querySelector('input[name="region"][value="' + regionIndex + '"]');
             if (radio) {
                 radio.checked = true;
                 autoHint.textContent = '✅ 已根据邮编自动选择区域';
@@ -348,6 +347,17 @@
         
         function calculateFreight(country, weight, serviceType, cargoType, regionIndex) {
             const results = [];
+            const warehouseCode = document.getElementById('warehouseCode').value.toUpperCase().trim();
+            
+            // 如果填写了仓库代码，自动获取区域
+            let autoRegionIndex = regionIndex;
+            if (warehouseCode && country === 'US') {
+                const warehouseInfo = getWarehouseInfo(warehouseCode);
+                if (warehouseInfo) {
+                    autoRegionIndex = warehouseInfo.region === '美西' ? 0 : warehouseInfo.region === '美中' ? 1 : 2;
+                }
+            }
+            
             freightRates.forEach(rate => {
                 if (!rate.countries.includes(country)) return;
                 if (serviceType && rate.providerType !== serviceType) return;
@@ -358,7 +368,8 @@
                     for (const range of rate.weightRanges) {
                         if (weight >= range.min && (range.max === null || weight < range.max)) {
                             if (Array.isArray(range.price)) {
-                                const price = range.price[regionIndex] || range.price[0];
+                                // 区域定价（美国）
+                                const price = range.price[autoRegionIndex] || range.price[0];
                                 basePrice = weight * price;
                                 priceDetail = price + '元/KG × ' + weight + 'kg';
                             } else if (range.price !== null) {
@@ -423,13 +434,17 @@
             const regionName = getRegionName(regionIndex);
             let html = '<h3>✅ 找到 ' + results.length + ' 个报价方案</h3>';
             html += '<p><strong>查询条件:</strong> ' + document.getElementById('country').options[document.getElementById('country').selectedIndex].text;
-            if (regionName) {
+            if (warehouseCode) {
+                const info = getWarehouseInfo(warehouseCode);
+                if (info) {
+                    html += ' <span class="badge badge-us-' + (info.region === '美西' ? 'west' : info.region === '美中' ? 'central' : 'east') + '">' + info.region + '</span> | 仓库：' + warehouseCode + ' (' + info.city + ', ' + info.state + ')';
+                } else {
+                    html += ' | 仓库：' + warehouseCode;
+                }
+            } else if (regionName) {
                 html += ' <span class="badge badge-us-' + (regionIndex === 0 ? 'west' : regionIndex === 1 ? 'central' : 'east') + '">' + regionName + '</span>';
             }
-            if (warehouseCode) {
-                html += ' | 仓库：' + warehouseCode;
-            }
-            if (zipCode) {
+            if (zipCode && !warehouseCode) {
                 html += ' | 邮编：' + zipCode;
             }
             html += ', ' + weight + 'kg</p>';
