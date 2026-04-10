@@ -3,82 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>木虾物流运费查询系统</title>
+    <title>木虾物流运费查询系统 v4.0</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div class="container">
         <header>
             <h1>📦 木虾物流运费查询系统</h1>
-            <p>基于腾讯文档实时报价数据的智能运费计算工具</p>
+            <p>v4.0 - 完整数据版本 (5 Sheet, 100+ 渠道)</p>
         </header>
 
         <main>
-            <div class="search-section">
-                <div class="info-banner">
-                    💡 数据每三天自动从腾讯文档同步一次，确保报价最新
-                    <br><small>最后更新: 2026-04-10 | 数据源: <a href="https://docs.qq.com/sheet/DRm1UQWp2aXlVZW1s" target="_blank">腾讯文档</a></small>
-                </div>
-                
+            <section class="search-section">
                 <div class="form-group">
-                    <label for="country">目的国家 *</label>
-                    <select id="country" required>
-                        <option value="">请选择目的国家</option>
+                    <label for="country">目的国 *</label>
+                    <select id="country">
+                        <option value="">请选择国家</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label for="weight">货物重量 (kg) *</label>
-                    <input type="number" id="weight" step="0.01" min="0.01" placeholder="请输入货物重量" required>
+                    <label for="weight">重量 (kg) *</label>
+                    <input type="number" id="weight" placeholder="输入货物重量" min="0.1" step="0.1">
                 </div>
 
-                <div class="form-group">
-                    <label for="serviceType">服务商类型</label>
-                    <select id="serviceType">
-                        <option value="">全部类型</option>
-                        <option value="快递">快递</option>
-                        <option value="空运">空运</option>
-                        <option value="海运">海运</option>
-                        <option value="专线">专线</option>
-                    </select>
-                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="serviceType">服务类型</label>
+                        <select id="serviceType">
+                            <option value="">全部</option>
+                            <option value="快递">快递</option>
+                            <option value="空运">空运</option>
+                            <option value="海运">海运</option>
+                            <option value="铁路">铁路</option>
+                        </select>
+                    </div>
 
-                <div class="form-group">
-                    <label for="cargoType">货物类型</label>
-                    <select id="cargoType">
-                        <option value="普货">普货</option>
-                        <option value="带电">带电</option>
-                        <option value="带磁">带磁</option>
-                        <option value="敏感货">敏感货</option>
-                    </select>
+                    <div class="form-group">
+                        <label for="cargoType">货物类型</label>
+                        <select id="cargoType">
+                            <option value="">普货</option>
+                            <option value="带电">带电</option>
+                            <option value="带磁">带磁</option>
+                            <option value="木制品">木制品</option>
+                            <option value="纺织品">纺织品</option>
+                            <option value="笔类">笔类</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="button-group">
                     <button class="btn btn-primary" onclick="searchFreight()">🔍 搜索运费</button>
                     <button class="btn btn-secondary" onclick="resetForm()">🔄 重置</button>
-                    <button class="btn btn-outline" onclick="exportResults()">📤 导出结果</button>
+                    <button class="btn btn-outline" onclick="exportResults()">📤 导出</button>
                 </div>
-            </div>
+            </section>
 
-            <div class="results-section">
-                <h2>查询结果</h2>
-                <div id="results" class="results-container">
+            <section class="results-section">
+                <div id="results">
                     <div class="empty-state">
                         <div class="icon">📦</div>
                         <p>请输入查询条件，点击搜索查看运费报价</p>
                     </div>
                 </div>
-            </div>
+            </section>
         </main>
 
         <footer>
-            <p>© 2026 木虾物流 | 数据每三天自动更新 | 基于腾讯文档最新报价</p>
+            <p>© 2026 木虾物流 | 数据更新：2026-04-10 14:43 | 
+               <a href="https://github.com/ean-888/freight-calculator" target="_blank">GitHub</a></p>
         </footer>
     </div>
 
-    <!-- 数据文件 -->
+    <!-- 数据 -->
     <script src="data/rates.js"></script>
-    <!-- 主要逻辑 -->
-    <script src="js/app.js"></script>
+    <!-- 主程序 -->
+    <script src="js/app_v4.js"></script>
 </body>
 </html>
