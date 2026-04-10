@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>木虾物流运费查询系统 v4.0</title>
+    <title>木虾物流运费查询系统 v4.1</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div class="container">
         <header>
             <h1>📦 木虾物流运费查询系统</h1>
-            <p>v4.0 - 完整数据版本 (5 Sheet, 100+ 渠道)</p>
+            <p>v4.1 - 修复国家选择器 (5 Sheet, 100+ 渠道)</p>
         </header>
 
         <main>
@@ -19,6 +19,7 @@
                     <label for="country">目的国 *</label>
                     <select id="country">
                         <option value="">请选择国家</option>
+                        <!-- 国家选项将通过 JavaScript 动态加载 -->
                     </select>
                 </div>
 
@@ -70,7 +71,7 @@
         </main>
 
         <footer>
-            <p>© 2026 木虾物流 | 数据更新：2026-04-10 14:43 | 
+            <p>© 2026 木虾物流 | 数据更新：2026-04-10 14:53 | 
                <a href="https://github.com/ean-888/freight-calculator" target="_blank">GitHub</a></p>
         </footer>
     </div>
@@ -78,6 +79,6 @@
     <!-- 数据 -->
     <script src="data/rates.js"></script>
     <!-- 主程序 -->
-    <script src="js/app_v4.js"></script>
+    <script src="js/app_v4.1.js"></script>
 </body>
 </html>
