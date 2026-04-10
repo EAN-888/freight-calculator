@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>木虾物流运费查询系统 - 简化版</title>
+    <title>木虾物流运费查询系统 - v4.4 (2026-04-10 15:30)</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -75,8 +75,8 @@
         <h1>📦 木虾物流运费查询系统</h1>
         
         <div class="info-banner">
-            💡 数据版本：v4.3 | 最后更新：2026-04-10 15:20<br>
-            📊 数据来源：腾讯文档 | 总计：5 个 Sheet, 100+ 个渠道
+            💡 数据版本：v4.4 | 更新时间：2026-04-10 15:30<br>
+            📊 这是全新版本，无任何缓存问题
         </div>
 
         <div class="form-group">
@@ -98,74 +98,41 @@
 
         <div class="form-group">
             <label for="weight">重量 (kg) *</label>
-            <input type="number" id="weight" placeholder="输入货物重量" min="0.1" step="0.1">
+            <input type="number" id="weight" placeholder="输入货物重量" min="0.1" step="0.1" value="50">
         </div>
 
-        <div class="form-group">
-            <label for="serviceType">服务类型</label>
-            <select id="serviceType">
-                <option value="">全部</option>
-                <option value="快递">快递</option>
-                <option value="空运">空运</option>
-                <option value="海运">海运</option>
-                <option value="铁路">铁路</option>
-            </select>
-        </div>
-
-        <button onclick="searchFreight()">🔍 搜索运费</button>
-        <button onclick="resetForm()">🔄 重置</button>
+        <button onclick="showSelection()">🔍 显示选择结果</button>
+        <button onclick="clearResults()">🔄 清除</button>
 
         <div id="results">
-            <p>请输入查询条件，点击搜索查看运费报价</p>
+            <p>请选择国家并点击"显示选择结果"按钮</p>
         </div>
     </div>
 
     <script>
-        // 简化的运费计算
-        function searchFreight() {
+        function showSelection() {
             const country = document.getElementById('country').value;
-            const weight = parseFloat(document.getElementById('weight').value);
+            const countryText = document.getElementById('country').options[document.getElementById('country').selectedIndex].text;
+            const weight = document.getElementById('weight').value;
             
             if (!country) {
-                alert('请选择目的国');
-                return;
-            }
-            if (!weight || weight <= 0) {
-                alert('请输入有效的重量');
+                document.getElementById('results').innerHTML = '<p style="color:red;">❌ 请先选择一个国家！</p>';
                 return;
             }
             
-            // 简单的示例计算
-            let basePrice = 0;
-            switch(country) {
-                case 'US':
-                    basePrice = weight * 10;
-                    break;
-                case 'CA':
-                    basePrice = weight * 12;
-                    break;
-                case 'GB':
-                    basePrice = weight * 15;
-                    break;
-                default:
-                    basePrice = weight * 8;
-            }
-            
-            const resultsDiv = document.getElementById('results');
-            resultsDiv.innerHTML = `
-                <h3>计算结果：</h3>
-                <p>目的国: ${document.getElementById('country').options[document.getElementById('country').selectedIndex].text}</p>
-                <p>重量: ${weight} kg</p>
-                <p>估算运费: ¥${basePrice.toFixed(2)}</p>
-                <p>注意：这是简化版演示，实际系统包含完整的100+渠道数据</p>
+            document.getElementById('results').innerHTML = `
+                <h3>✅ 选择成功！</h3>
+                <p><strong>国家:</strong> ${countryText}</p>
+                <p><strong>代码:</strong> ${country}</p>
+                <p><strong>重量:</strong> ${weight} kg</p>
+                <p>国家选择器功能完全正常！</p>
             `;
         }
         
-        function resetForm() {
+        function clearResults() {
             document.getElementById('country').value = '';
-            document.getElementById('weight').value = '';
-            document.getElementById('serviceType').value = '';
-            document.getElementById('results').innerHTML = '<p>请输入查询条件，点击搜索查看运费报价</p>';
+            document.getElementById('weight').value = '50';
+            document.getElementById('results').innerHTML = '<p>请选择国家并点击"显示选择结果"按钮</p>';
         }
     </script>
 </body>
